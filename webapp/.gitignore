@@ -1,0 +1,17 @@
+# Secrets
+.env
+
+# Cached Garmin data (personal)
+data/activities.json
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Node / frontend
+node_modules/
+dist/
+.vite/
+
+# OS
+.DS_Store

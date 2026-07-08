@@ -1,0 +1,22 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: #f2f5f8;
+}
+
+/* The equalizer scrolls with wheel/trackpad only; no visible drag bar. */
+.equalizer-scroll {
+  scrollbar-width: none;
+}
+.equalizer-scroll::-webkit-scrollbar {
+  display: none;
+}

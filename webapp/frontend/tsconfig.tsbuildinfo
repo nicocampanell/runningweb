@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/api.ts","./src/main.tsx","./src/vite-env.d.ts","./src/components/equalizer.tsx","./src/components/hovercard.tsx","./src/components/progressbar.tsx","./src/components/runneroverlay.tsx","./src/components/sporticon.tsx","./src/components/title.tsx","./src/components/waveline.tsx","./src/hooks/usetimeline.ts"],"version":"5.9.3"}
