@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "transcripts": {
+    "417f4cfc-9437-4f2c-bb27-bdd8ef135b25/417f4cfc-9437-4f2c-bb27-bdd8ef135b25.jsonl": {
+      "mtimeNs": 1783534035869567535
+    },
+    "ef55680d-1432-4839-b959-1413b19374e3/ef55680d-1432-4839-b959-1413b19374e3.jsonl": {
+      "mtimeNs": 1783533636636425322
+    },
+    "ef55680d-1432-4839-b959-1413b19374e3/subagents/40dba9ef-a2a3-4da4-8c19-feb32f14752c.jsonl": {
+      "mtimeNs": 1783453117869395802
+    },
+    "f00bbd28-fd1f-4149-a023-1bb15f2c301e/f00bbd28-fd1f-4149-a023-1bb15f2c301e.jsonl": {
+      "mtimeNs": 1783534001221715237
+    },
+    "f00bbd28-fd1f-4149-a023-1bb15f2c301e/subagents/c76d6c41-0bad-49fe-bce9-6be2e2ebf5df.jsonl": {
+      "mtimeNs": 1783534011874659511
+    }
+  }
+}
