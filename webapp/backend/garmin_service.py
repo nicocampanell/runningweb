@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import os
+import tempfile
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -33,8 +34,17 @@ METERS_PER_MILE = 1609.344
 # safe lower bound that still captures everything.
 EARLIEST_DATE = "2005-01-01"
 
-DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+# Default: webapp/data. On Render, set WORKOUT_DATA_DIR to a writable path
+# inside the service (e.g. ./data) so cache + tokens survive the process lifetime.
+DATA_DIR = Path(
+    os.getenv(
+        "WORKOUT_DATA_DIR",
+        str(Path(__file__).resolve().parent.parent / "data"),
+    )
+).expanduser()
 RAW_CACHE = DATA_DIR / "activities.json"
+# Prefer an explicit GARMINTOKENS path (Render sets this next to the cache).
+# Locally, fall back to the standard garminconnect token store.
 TOKEN_STORE = os.getenv("GARMINTOKENS", os.path.expanduser("~/.garminconnect"))
 
 
@@ -290,4 +300,19 @@ def _merge_activities(
 
 def _write_cache(activities: list[dict[str, Any]]) -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    RAW_CACHE.write_text(json.dumps(activities, indent=2))
+    temporary_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=DATA_DIR,
+            prefix=f".{RAW_CACHE.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as temporary_file:
+            temporary_path = Path(temporary_file.name)
+            json.dump(activities, temporary_file, indent=2)
+        os.replace(temporary_path, RAW_CACHE)
+    finally:
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
