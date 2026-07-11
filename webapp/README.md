@@ -52,7 +52,7 @@ python export.py --from 2018-01-01   # optional narrower start
 
 This writes `webapp/data/activities.json`.
 
-## 3. Run
+## 3. Run locally
 
 Backend:
 
@@ -74,6 +74,58 @@ on port 8000.
 
 The **sync** button (top-right) calls `POST /api/refresh` to incrementally pull
 newly-completed activities. `POST /api/refresh?full=true` re-pulls everything.
+
+While the backend is running, it also refreshes Garmin automatically every 24
+hours. If the cache is stale when you open the app, the next timeline request
+triggers a background refresh and the frontend polls every five minutes for
+updates. The equalizer always extends through today and stays scrolled to the
+most recent day.
+
+## 4. Deploy (Render backend + Vercel frontend)
+
+### Backend on Render (free)
+
+1. Push this repo to GitHub (your `runningweb` fork is fine).
+2. In [Render](https://dashboard.render.com/), create a **Blueprint** from the repo
+   (uses [`render.yaml`](../render.yaml)), **or** create a **Web Service** manually:
+   - Root directory: `webapp/backend`
+   - Build: `pip install -r requirements.txt`
+   - Start: `uvicorn app:app --host 0.0.0.0 --port $PORT`
+   - Health check: `/api/health`
+3. Set environment variables on the service:
+   - `EMAIL` / `PASSWORD` — Garmin credentials
+   - `CORS_ORIGINS` — your Vercel URL, e.g. `https://your-app.vercel.app`
+     (no trailing slash; comma-separate if you have more than one)
+   - Optional (Blueprint already sets these):
+     - `WORKOUT_DATA_DIR=/opt/render/project/src/data`
+     - `GARMINTOKENS=/opt/render/project/src/data/.garminconnect`
+4. Deploy, then open `https://<your-service>.onrender.com/api/health`.
+5. Hit **sync** once from the frontend (or `POST /api/refresh`) so Garmin data
+   is fetched. Free Render disks are ephemeral — a fresh deploy may need another
+   sync. Free instances also sleep when idle; opening the app again wakes them
+   and can trigger a stale-cache refresh.
+
+**MFA note:** if Garmin prompts for MFA, complete one login locally with
+`python export.py`, then copy the token store onto Render (or temporarily disable
+MFA for the service account). The cloud service cannot answer an interactive MFA
+prompt.
+
+### Frontend on Vercel (free)
+
+1. In [Vercel](https://vercel.com/), **Add New Project** → import the same repo.
+2. Configure:
+   - Framework preset: Vite
+   - Root directory: `webapp/frontend`
+   - Build command: `npm run build`
+   - Output directory: `dist`
+3. Add environment variable:
+   - `VITE_API_BASE` = `https://<your-service>.onrender.com`
+     (no trailing slash)
+4. Deploy. Copy the Vercel URL into Render’s `CORS_ORIGINS`, then redeploy the
+   API (or update env and restart) so the browser is allowed to call it.
+
+Local frontend still works without `VITE_API_BASE` because Vite proxies `/api`
+to `localhost:8000`.
 
 ## Customizing the look
 

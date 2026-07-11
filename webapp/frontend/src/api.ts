@@ -22,6 +22,8 @@ export interface TimelineResponse {
   restDays: number;
   workoutDays: number;
   maxColumn: number;
+  today: string;
+  lastDate: string;
   timeline: TimelineDay[];
 }
 

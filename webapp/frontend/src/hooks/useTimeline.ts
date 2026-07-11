@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { fetchTimeline, refreshTimeline, TimelineResponse } from "../api";
 
+export const TIMELINE_POLL_MS = 5 * 60 * 1000;
+
 interface UseTimelineState {
   data: TimelineResponse | null;
   loading: boolean;
@@ -21,8 +23,18 @@ export function useTimeline(): UseTimelineState {
       .then((res) => active && setData(res))
       .catch((err) => active && setError(err.message))
       .finally(() => active && setLoading(false));
+
+    const interval = window.setInterval(() => {
+      fetchTimeline()
+        .then((res) => active && setData(res))
+        .catch(() => {
+          // Preserve the last successful timeline during background polling.
+        });
+    }, TIMELINE_POLL_MS);
+
     return () => {
       active = false;
+      window.clearInterval(interval);
     };
   }, []);
 

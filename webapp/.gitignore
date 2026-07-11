@@ -3,6 +3,8 @@
 
 # Cached Garmin data (personal)
 data/activities.json
+data/.garminconnect/
+backend/data/
 
 # Python
 __pycache__/
