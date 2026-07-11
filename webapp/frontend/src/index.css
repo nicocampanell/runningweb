@@ -20,3 +20,54 @@ body {
 .equalizer-scroll::-webkit-scrollbar {
   display: none;
 }
+
+/* Opening sequence: rise from bottom at half opacity, then sprawl to full width. */
+.equalizer-opening-shell {
+  --ease-rise: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-sprawl: cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+  margin-inline: auto;
+}
+
+.equalizer-opening-shell[data-phase="enter"],
+.equalizer-opening-shell[data-phase="rise"] {
+  width: var(--intro-width, 60px);
+}
+
+.equalizer-opening-shell[data-phase="enter"] {
+  opacity: 0.5;
+  transform: translateY(42vh);
+}
+
+.equalizer-opening-shell[data-phase="rise"] {
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    transform 600ms var(--ease-rise),
+    opacity 600ms var(--ease-rise);
+}
+
+.equalizer-opening-shell[data-phase="sprawl"] {
+  width: 100%;
+  opacity: 1;
+  transform: translateY(0);
+  transition: width 700ms var(--ease-sprawl);
+}
+
+.equalizer-opening-shell[data-phase="done"] {
+  width: 100%;
+  opacity: 1;
+  transform: none;
+  overflow: visible;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .equalizer-opening-shell[data-phase="enter"],
+  .equalizer-opening-shell[data-phase="rise"],
+  .equalizer-opening-shell[data-phase="sprawl"] {
+    opacity: 1;
+    transform: none;
+    width: 100%;
+    transition: none;
+  }
+}
