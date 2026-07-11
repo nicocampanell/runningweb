@@ -1,10 +1,14 @@
-import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { TimelineDay } from "../api";
-import { HoverTarget, WaveLine } from "./WaveLine";
+import { COLUMN_PITCH, HoverTarget, WaveLine } from "./WaveLine";
 import RunnerOverlay from "./RunnerOverlay";
 
 const DOT_SIZE = 10; // idle cursor circle diameter
+const INTRO_COLUMN_COUNT = 10;
+const INTRO_WIDTH = INTRO_COLUMN_COUNT * COLUMN_PITCH;
+
+type IntroPhase = "enter" | "rise" | "sprawl" | "done";
 
 interface EqualizerProps {
   days: TimelineDay[];
@@ -12,9 +16,15 @@ interface EqualizerProps {
   // and the tallest bars are never clipped.
   maxColumn: number;
   onProgress: (progress: number) => void;
+  onIntroComplete?: () => void;
 }
 
-export default function Equalizer({ days, maxColumn, onProgress }: EqualizerProps) {
+export default function Equalizer({
+  days,
+  maxColumn,
+  onProgress,
+  onIntroComplete,
+}: EqualizerProps) {
   const COLUMN_HEIGHT = maxColumn;
   const CONTAINER_HEIGHT = maxColumn;
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -22,6 +32,60 @@ export default function Equalizer({ days, maxColumn, onProgress }: EqualizerProp
   const [mouse, setMouse] = useState<{ x: number; y: number } | null>(null);
   const [target, setTarget] = useState<HoverTarget | null>(null);
   const [hoveredDate, setHoveredDate] = useState<string | null>(null);
+  const [introPhase, setIntroPhase] = useState<IntroPhase>("enter");
+  const shellRef = useRef<HTMLDivElement>(null);
+  const riseHandledRef = useRef(false);
+  const introCompleteRef = useRef(onIntroComplete);
+  introCompleteRef.current = onIntroComplete;
+
+  const isAnimating = introPhase !== "done";
+
+  useEffect(() => {
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduced) {
+      setIntroPhase("done");
+      introCompleteRef.current?.();
+      return;
+    }
+
+    const id = requestAnimationFrame(() => setIntroPhase("rise"));
+    return () => cancelAnimationFrame(id);
+  }, []);
+
+  useEffect(() => {
+    if (introPhase !== "done") return;
+    introCompleteRef.current?.();
+  }, [introPhase]);
+
+  const handleShellTransitionEnd = (e: React.TransitionEvent<HTMLDivElement>) => {
+    if (e.target !== shellRef.current) return;
+    if (introPhase === "rise" && e.propertyName === "transform" && !riseHandledRef.current) {
+      riseHandledRef.current = true;
+      setIntroPhase("sprawl");
+    }
+    if (introPhase === "sprawl" && e.propertyName === "width") {
+      setIntroPhase("done");
+    }
+  };
+
+  // Keep the leftmost-day cluster visible while the shell widens during sprawl.
+  useLayoutEffect(() => {
+    if (introPhase !== "sprawl") return;
+    const el = scrollRef.current;
+    const shell = shellRef.current;
+    if (!el || !shell) return;
+
+    const pinScroll = () => {
+      el.scrollLeft = 0;
+      handleScroll();
+    };
+
+    pinScroll();
+    const observer = new ResizeObserver(pinScroll);
+    observer.observe(shell);
+    return () => observer.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [introPhase]);
 
   const handleScroll = () => {
     const el = scrollRef.current;
@@ -30,15 +94,15 @@ export default function Equalizer({ days, maxColumn, onProgress }: EqualizerProp
     onProgress(max > 0 ? el.scrollLeft / max : 0);
   };
 
-  // Start scrolled to the most recent day (right edge) once content is laid out.
+  // Pin to the left edge during intro and when the animation completes.
   useLayoutEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    el.scrollLeft = el.scrollWidth;
+    el.scrollLeft = 0;
     handleScroll();
     setTick((t) => t + 1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [days.length]);
+  }, [introPhase]);
 
   const handleHoverChange = useCallback((t: HoverTarget | null, date?: string) => {
     setTarget(t);
@@ -68,8 +132,8 @@ export default function Equalizer({ days, maxColumn, onProgress }: EqualizerProp
 
   return (
     <div
-      className="relative w-full cursor-none"
-      onMouseMove={(e) => setMouse({ x: e.clientX, y: e.clientY })}
+      className={`relative w-full ${isAnimating ? "pointer-events-none" : "cursor-none"}`}
+      onMouseMove={(e) => !isAnimating && setMouse({ x: e.clientX, y: e.clientY })}
       onMouseLeave={() => {
         setMouse(null);
         setTarget(null);
@@ -77,25 +141,35 @@ export default function Equalizer({ days, maxColumn, onProgress }: EqualizerProp
       }}
     >
       <div
-        ref={scrollRef}
-        onScroll={handleScroll}
-        className="equalizer-scroll flex items-center overflow-x-auto overflow-y-hidden"
-        style={{ height: CONTAINER_HEIGHT }}
+        ref={shellRef}
+        className="equalizer-opening-shell"
+        data-phase={introPhase}
+        style={{ "--intro-width": `${INTRO_WIDTH}px` } as React.CSSProperties}
+        onTransitionEnd={handleShellTransitionEnd}
       >
-        {days.map((day) => (
-          <WaveLine
-            key={day.date}
-            day={day}
-            columnHeight={COLUMN_HEIGHT}
-            isHovered={hoveredDate === day.date}
-            isDimmed={hoveredDate !== null && hoveredDate !== day.date}
-            onHoverChange={handleHoverChange}
-          />
-        ))}
+        <div
+          ref={scrollRef}
+          onScroll={handleScroll}
+          className={`equalizer-scroll flex items-center overflow-y-hidden ${
+            isAnimating ? "overflow-x-hidden" : "overflow-x-auto"
+          }`}
+          style={{ height: CONTAINER_HEIGHT }}
+        >
+          {days.map((day) => (
+            <WaveLine
+              key={day.date}
+              day={day}
+              columnHeight={COLUMN_HEIGHT}
+              isHovered={!isAnimating && hoveredDate === day.date}
+              isDimmed={!isAnimating && hoveredDate !== null && hoveredDate !== day.date}
+              onHoverChange={isAnimating ? () => {} : handleHoverChange}
+            />
+          ))}
+        </div>
       </div>
       <RunnerOverlay />
 
-      {mouse &&
+      {mouse && !isAnimating &&
         createPortal(
           <div
             className="pointer-events-none fixed z-40"

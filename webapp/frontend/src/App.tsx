@@ -6,7 +6,8 @@ import { useTimeline } from "./hooks/useTimeline";
 
 export default function App() {
   const { data, loading, error, refreshing, refresh } = useTimeline();
-  const [progress, setProgress] = useState(1);
+  const [progress, setProgress] = useState(0);
+  const [introDone, setIntroDone] = useState(false);
 
   const hasData = data && data.timeline.length > 0;
 
@@ -48,12 +49,16 @@ export default function App() {
               days={data.timeline}
               maxColumn={data.maxColumn}
               onProgress={setProgress}
+              onIntroComplete={() => setIntroDone(true)}
             />
           </div>
         )}
 
         {hasData && (
-          <div className="absolute bottom-[56px]">
+          <div
+            className="absolute bottom-[56px] transition-opacity duration-500 ease-out"
+            style={{ opacity: introDone ? 1 : 0 }}
+          >
             <ProgressBar progress={progress} total={data.timeline.length} />
           </div>
         )}
