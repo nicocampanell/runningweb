@@ -3,9 +3,9 @@
 - For the workout equalizer UI, preserve exact visual behavior the user asks for: pixel-level spacing, centering, hover effects, and bar lengths should be adjusted directly rather than approximated.
 
 ## Learned Workspace Facts
-- The repository now includes a `webapp/` Workout Equalizer app with a FastAPI backend and a Vite React TypeScript Tailwind frontend.
-- The webapp backend uses `python-garminconnect` to fetch lifetime Garmin activities, caches personal activity data at `webapp/data/activities.json`, and exposes `/api/timeline`, `/api/refresh`, `/api/config`, and `/api/health`.
-- Garmin lifetime activity pulls should use `Garmin.get_activities_by_date(start, end, sortorder="asc")`; activity type comes from `activityType.typeKey`, start time from `startTimeLocal`, and duration is measured in seconds.
-- The equalizer timeline groups activities by local calendar day, renders one segment per activity, uses grey rest-day lines, and currently scales workout heights proportionally to activity duration.
-- The frontend visualization is split across components such as `Equalizer`, `WaveLine`, `ProgressBar`, `HoverCard`, `RunnerOverlay`, and `Title` under `webapp/frontend/src/components/`.
-- Local development convention is Vite on port 5173 proxying to the FastAPI backend on port 8000; Garmin refreshes may require the backend to run with unrestricted network access in sandboxed agent sessions.
+- The repository is only the `webapp/frontend` Workout Equalizer: a static Vite React TypeScript Tailwind app deployed on Vercel. The python-garminconnect fork, FastAPI backend, Render config, and raw Garmin cache were removed (recoverable from git history).
+- All data is frozen in `webapp/frontend/src/timeline.json` (2024-12-25 through 2025-09-30); rowing segments carry exact `distanceM` meters alongside `distanceMi`.
+- The equalizer timeline groups activities by local calendar day, renders one segment per activity, uses grey rest-day lines, and scales workout heights proportionally to activity duration.
+- The frontend visualization is split across components such as `Equalizer`, `WaveLine`, `ProgressBar`, `HoverCard`, `Totals`, and `SoundToggle` under `webapp/frontend/src/components/`.
+- Selection is the hovered day when a mouse is present, otherwise the day at the scroller's center (touch); the scroller is padded by half its width so the first and last days can reach the center.
+- Local development is `npm run dev` in `webapp/frontend` (Vite on port 5173).

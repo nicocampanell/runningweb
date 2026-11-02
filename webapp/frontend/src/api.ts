@@ -1,3 +1,5 @@
+import timelineData from "./timeline.json";
+
 export interface ActivitySegment {
   type: string | null;
   bucket: string;
@@ -5,6 +7,7 @@ export interface ActivitySegment {
   minutes: number;
   height: number;
   distanceMi: number | null;
+  distanceM?: number | null; // rowing only, exact meters
   pace: string | null;
   durationLabel: string;
 }
@@ -27,23 +30,6 @@ export interface TimelineResponse {
   timeline: TimelineDay[];
 }
 
-const BASE = import.meta.env.VITE_API_BASE ?? "";
-
-export async function fetchTimeline(): Promise<TimelineResponse> {
-  const res = await fetch(`${BASE}/api/timeline`);
-  if (!res.ok) {
-    throw new Error(`Failed to load timeline (${res.status})`);
-  }
-  return res.json();
-}
-
-export async function refreshTimeline(full = false): Promise<TimelineResponse> {
-  const res = await fetch(`${BASE}/api/refresh?full=${full}`, {
-    method: "POST",
-  });
-  if (!res.ok) {
-    const detail = await res.text();
-    throw new Error(`Refresh failed (${res.status}): ${detail}`);
-  }
-  return res.json();
-}
+// Frozen Garmin history (2024-12-25 through 2025-09-30). The Python export that
+// built it was removed; it lives in git history if the data ever needs a refresh.
+export const timeline = timelineData as TimelineResponse;

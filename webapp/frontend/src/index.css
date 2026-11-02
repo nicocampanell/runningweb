@@ -21,17 +21,187 @@ body {
   display: none;
 }
 
-/* Opening sequence: rise from bottom at half opacity, then sprawl to full width. */
+/* Totals link: idle at 70% with no underline. On hover it goes solid, the
+   underline draws in from the left and, on leave, keeps traveling out to the
+   right (the anchor flips per state); the arrow lifts in toward its point. */
+.totals-link {
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  opacity: 0.7;
+  transition: opacity 200ms var(--ease-out);
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  border-radius: 4px;
+}
+
+.totals-underline {
+  background: linear-gradient(currentColor, currentColor) no-repeat right bottom / 0 1px;
+  transition: background-size 200ms var(--ease-out);
+}
+
+.totals-arrow {
+  opacity: 0;
+  transform: translate(-4px, 4px);
+  transition:
+    opacity 200ms var(--ease-out),
+    transform 200ms var(--ease-out);
+}
+
+.totals-link:focus-visible {
+  outline: none;
+  opacity: 1;
+  box-shadow: 0 0 0 4px #f2f5f8, 0 0 0 5px #212121;
+}
+
+.totals-link:focus-visible .totals-underline {
+  background-position: left bottom;
+  background-size: 100% 1px;
+}
+
+.totals-link:focus-visible .totals-arrow {
+  opacity: 1;
+  transform: none;
+}
+
+@media (hover: hover) {
+  .totals-link:hover {
+    opacity: 1;
+  }
+  .totals-link:hover .totals-underline {
+    background-position: left bottom;
+    background-size: 100% 1px;
+  }
+  .totals-link:hover .totals-arrow {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Sound toggle: waves grow out of the speaker one after another and the slash
+   draws across it. Each state orders its exits before its entrances. */
+.sound-wave {
+  transform-box: view-box;
+  transform-origin: 11px 12px;
+  transition:
+    opacity 200ms var(--ease-out),
+    transform 200ms var(--ease-out);
+}
+
+.sound-toggle[data-on="false"] .sound-wave {
+  opacity: 0;
+  transform: scale(0.4);
+}
+
+.sound-toggle[data-on="true"] .sound-wave-1 {
+  transition-delay: 80ms;
+}
+.sound-toggle[data-on="true"] .sound-wave-2 {
+  transition-delay: 140ms;
+}
+.sound-toggle[data-on="false"] .sound-wave-1 {
+  transition-delay: 60ms;
+}
+
+/* Gap is 1.2 (not 1) so the hidden dash never sits on a path end, where a
+   round cap would leave a dot. */
+.sound-slash {
+  stroke-dasharray: 1 1.2;
+  stroke-dashoffset: var(--slash);
+  transition: stroke-dashoffset 220ms var(--ease-out);
+}
+.sound-toggle[data-on="false"] .sound-slash {
+  transition-delay: 100ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .totals-link,
+  .totals-underline,
+  .totals-arrow,
+  .sound-wave,
+  .sound-slash {
+    transition: none;
+  }
+}
+
+/* Apple-style Liquid Glass: light tint, low blur with boosted saturation and
+   brightness, specular rim (strong top, soft sides), soft lift shadow. */
+.liquid-glass {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.14) 0%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+  -webkit-backdrop-filter: blur(2px) saturate(180%) brightness(1.04);
+  backdrop-filter: blur(2px) saturate(180%) brightness(1.04);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow:
+    0 8px 24px rgba(31, 26, 23, 0.08),
+    0 1px 2px rgba(31, 26, 23, 0.06),
+    inset 0 1px 1px rgba(255, 255, 255, 0.95),
+    inset 0 -1px 1px rgba(255, 255, 255, 0.5),
+    inset 1px 0 1px rgba(255, 255, 255, 0.35),
+    inset -1px 0 1px rgba(255, 255, 255, 0.35);
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  .liquid-glass {
+    background: rgba(255, 255, 255, 0.92);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .liquid-glass {
+    background: #fff;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+/* Hover card text roll along --dir (1 = forward in time). Entering text only
+   blurs + fades here; its slide is a velocity-scaled spring in HoverCard. */
+@keyframes card-roll-in {
+  from {
+    opacity: 0;
+    filter: blur(4px);
+  }
+}
+
+@keyframes card-roll-out {
+  to {
+    opacity: 0;
+    filter: blur(4px);
+    transform: translateX(calc(var(--dir) * 14px));
+  }
+}
+
+.card-roll-in {
+  animation: card-roll-in 160ms cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.card-roll-out {
+  animation: card-roll-out 160ms cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-roll-in {
+    animation: none;
+  }
+  .card-roll-out {
+    display: none;
+  }
+}
+
+/* Opening sequence: the first columns (at the center, scrollLeft 0) rise from
+   the bottom at half opacity, then the reveal sprawls rightward to the edge. */
 .equalizer-opening-shell {
   --ease-rise: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-sprawl: cubic-bezier(0.16, 1, 0.3, 1);
+  --reveal-left: calc(50% - 3px);
   overflow: hidden;
-  margin-inline: auto;
 }
 
 .equalizer-opening-shell[data-phase="enter"],
 .equalizer-opening-shell[data-phase="rise"] {
-  width: var(--intro-width, 60px);
+  clip-path: inset(0 calc(50% + 3px - var(--intro-width, 60px)) 0 var(--reveal-left));
 }
 
 .equalizer-opening-shell[data-phase="enter"] {
@@ -43,19 +213,18 @@ body {
   opacity: 1;
   transform: translateY(0);
   transition:
-    transform 600ms var(--ease-rise),
-    opacity 600ms var(--ease-rise);
+    transform 462ms var(--ease-rise),
+    opacity 462ms var(--ease-rise);
 }
 
 .equalizer-opening-shell[data-phase="sprawl"] {
-  width: 100%;
+  clip-path: inset(0 0 0 var(--reveal-left));
   opacity: 1;
   transform: translateY(0);
-  transition: width 700ms var(--ease-sprawl);
+  transition: clip-path 538ms var(--ease-sprawl);
 }
 
 .equalizer-opening-shell[data-phase="done"] {
-  width: 100%;
   opacity: 1;
   transform: none;
   overflow: visible;
@@ -67,7 +236,7 @@ body {
   .equalizer-opening-shell[data-phase="sprawl"] {
     opacity: 1;
     transform: none;
-    width: 100%;
+    clip-path: none;
     transition: none;
   }
 }

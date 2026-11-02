@@ -1,102 +1,83 @@
-import { memo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { memo } from "react";
 import { TimelineDay } from "../api";
-import HoverCard from "./HoverCard";
 
 // The visible bar is 2px wide; the hitbox spans the full column pitch
 // (2px bar + 4px spacing) so there is 3x more room to hover.
 export const COLUMN_PITCH = 6;
 
+export const REST_OPACITY = 0.2;
+// Snap on instantly, fade back slowly: scrubbing leaves a decaying trail.
+// The hover click's volume follows the same curve.
+export const TRAIL_MS = 350;
+const TRAIL = `${TRAIL_MS}ms ease-in-out`;
+
 export interface HoverTarget {
   x: number; // viewport x of the column center
-  top: number; // viewport y of the top of the bar stack
-  height: number; // total height of the bar stack
-  color: string; // color of the dominant (longest) segment
+  top: number; // viewport y of the top of the dominant (longest) segment
+  height: number; // height of the dominant segment
+  color: string; // color of the dominant segment
 }
 
 interface WaveLineProps {
   day: TimelineDay;
   columnHeight: number;
   isHovered: boolean;
-  isDimmed: boolean;
-  onHoverChange: (target: HoverTarget | null, date?: string) => void;
+}
+
+// Measures a column element (the WaveLine root) for the hover card and cursor.
+export function hoverTargetFor(el: Element, day: TimelineDay): HoverTarget {
+  const r = el.getBoundingClientRect();
+  const stack = el.querySelector("[data-stack]");
+  const stackRect = stack ? stack.getBoundingClientRect() : r;
+
+  const dominant = day.segments.reduce(
+    (best, s, i, all) => (s.minutes > all[best].minutes ? i : best),
+    0
+  );
+  // Morph onto the dominant segment only, so its color never covers the others.
+  const segRect =
+    stack?.children[dominant]?.getBoundingClientRect() ?? stackRect;
+  return {
+    x: r.left + r.width / 2,
+    top: segRect.top,
+    height: segRect.height,
+    color: day.segments[dominant].color,
+  };
 }
 
 function WaveLineComponent({
   day,
   columnHeight,
   isHovered,
-  isDimmed,
-  onHoverChange,
 }: WaveLineProps) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [anchor, setAnchor] = useState<{ x: number; y: number } | null>(null);
-
-  const showCard = () => {
-    const el = ref.current;
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    // Anchor the card above the top of the visible bar stack.
-    const stack = el.querySelector("[data-stack]") as HTMLElement | null;
-    const stackRect = stack ? stack.getBoundingClientRect() : r;
-    const centerX = r.left + r.width / 2;
-    setAnchor({ x: centerX, y: stackRect.top });
-
-    const dominant = day.segments.reduce((a, b) =>
-      b.minutes > a.minutes ? b : a
-    );
-    onHoverChange({
-      x: centerX,
-      top: stackRect.top,
-      height: stackRect.height,
-      color: dominant.color,
-    }, day.date);
-  };
-
-  const hideCard = () => {
-    setAnchor(null);
-    onHoverChange(null);
-  };
-
   return (
     <div
-      ref={ref}
+      data-date={day.date}
       className="relative flex shrink-0 flex-col items-center justify-center"
       style={{ height: columnHeight, width: COLUMN_PITCH }}
-      onMouseEnter={showCard}
-      onMouseLeave={hideCard}
     >
       {/* Stacked activity segments, 2px vertical gap between them. */}
       <div
         data-stack
-        className="flex flex-col items-center gap-[2px] transition-opacity duration-150 ease-out"
-        style={{ opacity: isDimmed ? 0.7 : 1 }}
+        className="flex flex-col items-center gap-[2px]"
+        style={{
+          opacity: isHovered ? 1 : REST_OPACITY,
+          transition: isHovered ? "none" : `opacity ${TRAIL}`,
+        }}
       >
         {day.segments.map((seg, i) => (
           <div
             key={i}
-            className="rounded-full transition-[width] duration-150 ease-out"
+            className="w-[4px] rounded-full"
             style={{
               height: seg.height,
-              width: isHovered ? 4 : 2,
               backgroundColor: seg.color,
+              transform: isHovered ? "none" : "scaleX(0.5)",
+              transition: isHovered ? "none" : `transform ${TRAIL}`,
             }}
           />
         ))}
       </div>
-
-      {/* Rendered via portal + fixed positioning so it is never clipped by the
-          horizontally-scrolling equalizer container. */}
-      {anchor &&
-        createPortal(
-          <div
-            className="pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-full pb-2"
-            style={{ left: anchor.x, top: anchor.y - 6 }}
-          >
-            <HoverCard day={day} />
-          </div>,
-          document.body
-        )}
     </div>
   );
 }
